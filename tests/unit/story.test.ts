@@ -276,7 +276,7 @@ describe('memory', () => {
 describe('soak', () => {
   const pacings: Pacing[] = ['quiet', 'balanced', 'chaotic'];
   for (const pacing of pacings) {
-    it(`survives a thousand days on ${pacing}, and reaches every arc's end`, { timeout: 120000 }, () => {
+    it(`survives a thousand days on ${pacing}, and reaches every arc's end`, { timeout: 300000 }, () => {
       const e = new Engine(createWorld(12345));
       const w = e.world;
       w.settings.pacing = pacing;

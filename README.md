@@ -15,6 +15,10 @@ npm run build      # typecheck and production build, into dist/
 There is no backend, account, API key or network dependency. To keep it above
 your other windows, open **Stage → Float in a small window** (Chrome or Edge).
 
+Every push to `main` is tested and deployed to GitHub Pages by
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml). The repository's
+Pages source must be set to **GitHub Actions**.
+
 ## Testing
 
 ```sh

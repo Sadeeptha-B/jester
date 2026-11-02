@@ -182,11 +182,13 @@ export async function startGame(host: HTMLElement): Promise<Game> {
       for (const node of document.head.querySelectorAll('style, link[rel="stylesheet"]')) pip.document.head.append(node.cloneNode(true));
       const root = document.getElementById('root')!;
       pip.document.body.append(root);
+      renderer.showIn(pip.document);
       clock.cancelAnimationFrame(raf);
       clock = pip;
       run();
       pip.addEventListener('pagehide', () => {
         document.body.append(root);
+        renderer.showIn(null);
         clock = window;
         run();
       });

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useUi } from './store';
 import { WorldView } from './WorldView';
 import { Inspect } from './Inspect';
@@ -48,6 +49,19 @@ function Notice() {
 
 export function App() {
   const panel = useUi((s) => s.panel);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const ui = useUi.getState();
+      ui.openPanel(null);
+      ui.select(null);
+      ui.setExpanded(false);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="app">
       <main className="stage">

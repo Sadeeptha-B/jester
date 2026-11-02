@@ -3,7 +3,7 @@ import { DECREE_BY_ID, EVENT_BY_ID } from '../narrative/registry';
 import { GATE, LOCATIONS, PLOTS, type LocationId, type Pt } from '../narrative/content/map';
 import type { Beat, Effect, EventDef } from '../narrative/schema';
 import { seconds } from './clock';
-import { applyEffects } from './effects';
+import { applyEffects, InvalidEffect } from './effects';
 import { findPath, nearestWalkable } from './nav';
 import { next, pick, range } from './rng';
 import { render } from './text';
@@ -115,7 +115,14 @@ function release(world: World) {
 export function finishScene(world: World, cues: Cue[] = []) {
   const scene = world.scene!;
   const staged = sceneOf(scene.key);
-  applyEffects(world, staged.effects, scene.cast);
+  try {
+    applyEffects(world, staged.effects, scene.cast);
+  } catch (error) {
+    // An outcome that doesn't fit the world is dropped whole; the show goes on without it.
+    if (!(error instanceof InvalidEffect)) throw error;
+    release(world);
+    return;
+  }
   const at = pointFor(staged.at);
   if (staged.opens) {
     const e = staged.opens;

@@ -228,8 +228,7 @@ export type Cue =
   | { type: 'flash'; x: number; y: number }
   | { type: 'lamp'; index: number; lit: boolean }
   | { type: 'tomato'; id: string }
-  | { type: 'quip'; text: string; mood: Mood }
-  | { type: 'saved' };
+  | { type: 'quip'; text: string; mood: Mood };
 
 export type Command =
   | { type: 'lift'; id: string }

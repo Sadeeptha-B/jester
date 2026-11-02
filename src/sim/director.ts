@@ -1,5 +1,5 @@
 import { CITIZENS } from '../narrative/content/citizens';
-import { JESTER_LINES } from '../narrative/content/jester';
+import { FIRST_REMARK, JESTER_LINES } from '../narrative/content/jester';
 import { ARCS, EVENTS, OPENING_ACT } from '../narrative/registry';
 import type { EventDef } from '../narrative/schema';
 import { seconds } from './clock';
@@ -12,9 +12,9 @@ import type { Cue, Pacing, World } from './types';
 
 /** How long the Stage Manager leaves between things, in real seconds at normal speed. */
 const RHYTHM: Record<Pacing, { ambient: [number, number]; incident: [number, number]; decision: [number, number]; quip: [number, number] }> = {
-  quiet: { ambient: [120, 220], incident: [720, 1200], decision: [1800, 3000], quip: [300, 600] },
-  balanced: { ambient: [60, 120], incident: [300, 480], decision: [900, 1200], quip: [150, 320] },
-  chaotic: { ambient: [28, 60], incident: [120, 200], decision: [360, 540], quip: [70, 160] },
+  quiet: { ambient: [120, 220], incident: [1000, 1700], decision: [2400, 3600], quip: [300, 600] },
+  balanced: { ambient: [60, 120], incident: [420, 720], decision: [1200, 1800], quip: [150, 320] },
+  chaotic: { ambient: [28, 60], incident: [150, 260], decision: [420, 640], quip: [70, 160] },
 };
 
 const NO_REPEAT = 12;
@@ -127,6 +127,12 @@ function setNext(world: World, key: 'ambient' | 'incident' | 'decision' | 'quip'
 
 function quip(world: World, cues: Cue[]) {
   const d = world.director;
+  // The only instruction anyone is ever given, and it comes as a remark.
+  if (!d.quips.length && !world.flags.hinted) {
+    world.flags.hinted = true;
+    cues.push({ type: 'quip', text: FIRST_REMARK, mood: 'scheme' });
+    return;
+  }
   const options: number[] = [];
   JESTER_LINES.forEach((line, i) => {
     if (!d.quips.includes(i) && holds(world, line.when)) options.push(i);

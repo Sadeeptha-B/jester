@@ -126,6 +126,47 @@ describe('effects', () => {
   });
 });
 
+describe('decrees', () => {
+  it('survives a decree at dead of night, with nobody about to make a crowd', () => {
+    const e = new Engine(createWorld(4));
+    e.world.director.opening = 99;
+    e.world.clock.minute = 2 * 60;
+    run(e, seconds(40));
+    for (const id of ['gathering', 'holiday', 'artifact']) {
+      e.send({ type: 'decree', id });
+      for (let i = 0; i < seconds(170) && (e.world.scene || e.world.queue.length); i++) e.tick();
+      run(e, seconds(3));
+      expect(Object.values(e.world.citizens).filter((c) => c.staged && !e.world.scene).length, id).toBe(0);
+    }
+    expect(e.world.flags.gathering_held).toBe(true);
+  });
+
+  it('drops an outcome that does not fit, and releases the cast', () => {
+    const w = createWorld(1);
+    startScene(w, 'decree:appointment', { subject: 'pip', office: 'emperor' });
+    finishScene(w);
+    expect(w.scene).toBeNull();
+    expect(w.citizens.pip.staged).toBe(false);
+    expect(w.offices.emperor).toBeUndefined();
+  });
+
+  it('appoints whom it is told to', () => {
+    const e = new Engine(createWorld(4));
+    e.send({ type: 'decree', id: 'appointment', office: 'philosopher', citizen: 'nan' });
+    for (let i = 0; i < seconds(200) && e.world.offices.philosopher !== 'nan'; i++) e.tick();
+    expect(e.world.offices.philosopher).toBe('nan');
+  });
+
+  it('refuses a second scroll while the first is out', () => {
+    const e = new Engine(createWorld(4));
+    e.send({ type: 'decree', id: 'holiday' });
+    run(e, 2);
+    e.send({ type: 'decree', id: 'artifact' });
+    run(e, seconds(150));
+    expect(e.world.landmarks.some((l) => l.id === 'artifact')).toBe(false);
+  });
+});
+
 describe('stage and offstage', () => {
   it('resolves an event to the same lasting state either way', () => {
     for (const e of EVENTS) {
@@ -150,8 +191,9 @@ describe('stage and offstage', () => {
     const e = new Engine(createWorld(4));
     toFirstDecision(e);
     e.send({ type: 'decide', choice: 'election' });
+    for (let i = 0; i < seconds(60) && !e.world.scene?.key.startsWith('choice'); i++) e.tick();
     run(e, 60);
-    expect(e.world.scene).not.toBeNull();
+    expect(e.world.scene?.key).toBe('choice:gerald_coup:election');
     finishScene(e.world);
     expect(Object.values(e.world.citizens).some((c) => c.staged)).toBe(false);
     expect(e.world.arcs.weather.stage).toBe('election');

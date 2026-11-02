@@ -128,10 +128,13 @@ export const JESTER_LINES: JesterLine[] = [
   smug('{fact:raise}. I wear it with pride, and it jingles.', { fact: 'raise' }),
   scheme('The monument still says what it says. I asked if I was a good person. It was very kind about it.', { fact: 'monument' }),
   smug('Remember {fact:artifact}? It has started humming along with Wick. Nobody has mentioned it.', { fact: 'artifact' }),
-  shock('I spoke to {fact:visitor}. I asked what they wanted. They just wrote that down.', { fact: 'visitor' }),
+  shock('Thinking of {fact:visitor}. I asked what they wanted. They just wrote that down.', { flag: 'visitor_here' }),
+  solemn('I keep thinking about {fact:visitor_left}. Smaller than who said?', { fact: 'visitor_left' }),
   solemn('{fact:ants}. I would just like to say that it is the only thing going well.', { fact: 'ants' }),
   delight('Change is being given in radishes. I have made a killing, in the sense that I have a lot of old radishes.', { flag: 'turnip_standard' }),
 ];
+
+export const FIRST_REMARK = 'A word to the wise, Your Majesty. Click on anyone to see what they are up to. You can also pick them up. They will mention it.';
 
 /** What he says about each citizen when asked. */
 export const JESTER_ON: Record<string, string> = {

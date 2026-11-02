@@ -36,6 +36,7 @@ button { font: inherit; color: inherit; }
 
 .world { position: absolute; inset: 0; touch-action: none; }
 .world canvas { display: block; width: 100%; height: 100%; }
+.world canvas.mirror { position: absolute; inset: 0; }
 
 .topbar {
   position: absolute;

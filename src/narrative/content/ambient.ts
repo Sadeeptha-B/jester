@@ -222,6 +222,42 @@ export const AMBIENT: EventDef[] = [
     [go('cornelius', 'perpetua'), say('perpetua', 'You are eleven seconds late.'), say('cornelius', 'Am I? Or is everyone else early?'), emote('perpetua', 'anger')],
     { when: { flag: 'clock_faith' }, callback: true },
   ),
+  // Rarities. Most people will see one or two of these, and wonder.
+  scene(
+    'fourth_wall',
+    'pond',
+    { jester: 'jester' },
+    [go('jester', 'pond'), emote('jester', 'question'), wait(2), say('jester', 'Hello? Is there somebody out there, behind all that glass?'), wait(2), say('jester', 'Blink twice if you are enjoying this.')],
+    { weight: 0.12, cooldownDays: 20 },
+  ),
+  scene(
+    'lit_window',
+    'ministry',
+    { percival: 'percival' },
+    [go('percival', 'ministry'), emote('percival', 'question'), say('percival', 'There is a light on up there. There is always a light on up there.'), wait(1.5), emote('percival', 'sweat'), say('percival', 'I shall not be checking.')],
+    { weight: 0.15, cooldownDays: 20, when: { hour: [21, 5] } },
+  ),
+  scene(
+    'the_threads',
+    'tower',
+    { pip: 'pip', archibald: 'archibald' },
+    [go('pip', 'archibald'), say('pip', 'Sir, has anyone ever told you what the clouds are hanging from?'), say('archibald', 'Do not be absurd, Pip. Clouds hang from the sky.'), emote('pip', 'sweat'), say('pip', 'Yes, sir.')],
+    { weight: 0.12, cooldownDays: 20 },
+  ),
+  scene(
+    'chicken_ledger',
+    'ministry',
+    { chicken: 'chicken', beatrice: 'beatrice' },
+    [go('chicken', 'beatrice'), emote('beatrice', 'exclaim'), say('chicken', 'Bk.'), say('beatrice', 'Your papers appear to be in order.'), emote('chicken', 'star')],
+    { weight: 0.1, cooldownDays: 25 },
+  ),
+  scene(
+    'mice',
+    'castle',
+    { a: any() },
+    [go('a', 'castle'), say('a', 'Something has been at the archives. I can hear chewing.'), emote('a', 'sweat')],
+    { weight: 0.1, cooldownDays: 25 },
+  ),
   scene(
     'tomato_inquiry',
     'square',

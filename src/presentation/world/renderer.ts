@@ -116,6 +116,7 @@ export class WorldRenderer {
   private lens = { x: 0, y: 0, zoom: 1 };
   private lensTarget: { x: number; y: number; zoom: number } | null = null;
   private low = false;
+  private mirror: HTMLCanvasElement | null = null;
 
   private logW = BASE_W;
   private logH = BASE_H;
@@ -671,7 +672,39 @@ export class WorldRenderer {
     const res = this.app.renderer.resolution;
     this.presenter.update([this.logW, this.logH], this.pixelScale * res, this.lensBox(), gradeAt(hour, world.weather), fog, this.time);
     r.render({ container: this.present });
+    this.copyToMirror();
     this.onFrame?.();
+  }
+
+  /**
+   * Chromium keeps a WebGL canvas's buffer correct after it moves to another
+   * window, but stops putting it on screen there. So while floating, the WebGL
+   * canvas stays hidden and each finished frame is copied, in the same task,
+   * to a plain 2D canvas that belongs to the floating window.
+   */
+  showIn(doc: Document | null) {
+    const source = this.app.canvas;
+    this.mirror?.remove();
+    this.mirror = null;
+    source.style.visibility = '';
+    if (!doc) return;
+    const mirror = doc.createElement('canvas');
+    mirror.className = 'mirror';
+    source.after(mirror);
+    source.style.visibility = 'hidden';
+    this.mirror = mirror;
+  }
+
+  private copyToMirror() {
+    const mirror = this.mirror;
+    if (!mirror) return;
+    const source = this.app.canvas;
+    if (mirror.width !== source.width || mirror.height !== source.height) {
+      mirror.width = source.width;
+      mirror.height = source.height;
+    }
+    const ctx = mirror.getContext('2d');
+    ctx?.drawImage(source, 0, 0);
   }
 
   private drawSky(hour: number, world: World, dt: number) {

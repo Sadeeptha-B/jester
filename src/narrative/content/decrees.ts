@@ -55,7 +55,7 @@ export const DECREES: DecreeDef[] = [
     blurb: 'Bring everyone together, and see what happens.',
     herald: 'The Throne calls a Gathering! All citizens will stand near each other, and see what comes of it.',
     beats: [gather(['crowd1', 'crowd2', 'crowd3', 'crowd4'], 'square'), say('crowd1', 'So... do you come here often?'), emote('crowd2', 'love'), emote('crowd3', 'anger'), say('crowd4', 'I would like it noted that this was a mistake.'), flash('herald')],
-    effects: [fx.rel('$crowd1', '$crowd2', 1), fx.rel('$crowd3', '$crowd4', -1), fx.chronicle('By royal decree, a Gathering was held. It went about as well as those things go.', 1, 'decision')],
+    effects: [fx.flag('gathering_held'), fx.chronicle('By royal decree, a Gathering was held. It went about as well as those things go.', 1, 'decision')],
     dispatch: { title: 'By Royal Decree', text: 'The Gathering has taken place. Two friendships began, one ended, and someone has lost a hat.' },
   },
 ];

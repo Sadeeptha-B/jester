@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CITIZEN_BY_ID, CITIZENS, OFFICE_NAMES } from '../../narrative/content/citizens';
 import { DECREES } from '../../narrative/content/decrees';
 import { JESTER_ON } from '../../narrative/content/jester';
@@ -137,7 +137,7 @@ export function DecreePanel() {
   const [weather, setWeather] = useState<Weather>('rain');
   if (!game) return null;
   const { engine } = game;
-  const people = CITIZENS.filter((c) => !engine.world.citizens[c.id].absent && !c.animal || c.id === 'gerald' || c.id === 'chicken').filter((c) => !engine.world.citizens[c.id].absent);
+  const people = CITIZENS.filter((c) => !engine.world.citizens[c.id].absent);
 
   const sign = (id: string) => {
     const d = DECREES.find((x) => x.id === id)!;
@@ -258,10 +258,17 @@ export function SettingsPanel() {
   const game = useUi((s) => s.game);
   const [, refresh] = useState(0);
   const [confirming, setConfirming] = useState(false);
-  const canPip = useMemo(() => 'documentPictureInPicture' in window, []);
-  useEffect(() => setConfirming(false), []);
+  const canPip = useMemo(() => {
+    const host = window as unknown as { documentPictureInPicture?: { window: Window | null } };
+    return Boolean(host.documentPictureInPicture) && !host.documentPictureInPicture?.window;
+  }, []);
   if (!game) return null;
   const { settings } = game.engine.world;
+  const float = () => {
+    const ui = useUi.getState();
+    ui.openPanel(null);
+    game.popOut().catch(() => ui.say('The window declined to float. Browsers can be like that.', 'bored'));
+  };
   const update = (f: () => void) => {
     f();
     game.save();
@@ -297,7 +304,7 @@ export function SettingsPanel() {
           <>
             <h3>Always on Top</h3>
             <div className="radio-row">
-              <button className="tab" onClick={() => void game.popOut()}>Float in a small window</button>
+              <button className="tab" onClick={float}>Float in a small window</button>
             </div>
             <p className="empty">Keeps the kingdom above your other windows. Keep this tab open.</p>
           </>
@@ -327,6 +334,7 @@ export function Recap() {
     game.engine.world.recap = null;
     setRecap(null);
     game.renderer.setCurtain(true);
+    useUi.getState().say('And we are back. Do try to look as though you never left.', 'smug');
   };
   return (
     <div className="recap-wrap">

@@ -93,9 +93,11 @@ test('D: a decree summons a visitor, who arrives and stays', async ({ page }) =>
   await page.waitForFunction('window.jester?.world.citizens.visitor.absent === false', null, { timeout: 60_000 });
   await expect(page.locator('.ticker')).toContainText(/stranger/, { timeout: 10_000 });
   await saveNow(page);
-  await page.goto('/?nocurtain');
+  await page.goto('/?nocurtain&speed=30&pacing=chaotic');
   await page.waitForFunction('window.jester');
   expect(await world(page, 'citizens.visitor.absent')).toBe(false);
+  // And something comes of it.
+  await page.waitForFunction("window.jester.world.flags.visitor_curious === true || window.jester.world.citizens.visitor.absent", null, { timeout: 90_000 });
   expect(errors).toEqual([]);
 });
 
@@ -113,6 +115,24 @@ test('the Hand lifts and drops a citizen, who remembers', async ({ page }) => {
   await expect.poll(() => world(page, 'citizens.percival.liftCount')).toBe(1);
   await expect(page.locator('.bubble').first()).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('the floating window’s mirror really receives the picture', async ({ page }) => {
+  // A real float needs a headed browser and a GPU, so this covers the copy itself.
+  await page.goto('/?fresh&seed=7&hour=10&nocurtain');
+  await page.waitForFunction('window.jester');
+  await page.evaluate('window.jester.renderer.showIn(document)');
+  await page.waitForTimeout(600);
+  const sample = (await page.evaluate(`(() => {
+    const m = document.querySelector('canvas.mirror');
+    const d = m.getContext('2d').getImageData(m.width >> 1, m.height >> 1, 1, 1).data;
+    return { px: [...d], width: m.width, hidden: m.previousElementSibling.style.visibility };
+  })()`)) as { px: number[]; width: number; hidden: string };
+  expect(sample.width).toBeGreaterThan(0);
+  expect(sample.hidden).toBe('hidden');
+  expect(sample.px[0] + sample.px[1] + sample.px[2]).toBeGreaterThan(30);
+  await page.evaluate('window.jester.renderer.showIn(null)');
+  await expect(page.locator('canvas.mirror')).toHaveCount(0);
 });
 
 test('clicking inspects a citizen, a building and a monument', async ({ page }) => {

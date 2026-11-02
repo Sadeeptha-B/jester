@@ -41,6 +41,9 @@ interface UiState {
   panel: Panel;
   recap: Recap | null;
   notice: string | null;
+  /** The kingdom is running in another window, and this one is waiting its turn. */
+  elsewhere: boolean;
+  canInstall: boolean;
   setGame(game: Game): void;
   select(s: Selection): void;
   setHover(h: UiState['hover']): void;
@@ -53,6 +56,8 @@ interface UiState {
   openPanel(p: Panel): void;
   setRecap(r: Recap | null): void;
   setNotice(n: string | null): void;
+  setElsewhere(v: boolean): void;
+  setCanInstall(v: boolean): void;
 }
 
 let nextKey = 1;
@@ -71,6 +76,8 @@ export const useUi = create<UiState>((set, get) => ({
   panel: null,
   recap: null,
   notice: null,
+  elsewhere: false,
+  canInstall: false,
   setGame: (game) => set({ game }),
   select: (selection) => set({ selection, panel: selection ? null : get().panel }),
   setHover: (hover) => set({ hover }),
@@ -98,4 +105,6 @@ export const useUi = create<UiState>((set, get) => ({
   openPanel: (panel) => set({ panel, selection: panel ? null : get().selection, expanded: false }),
   setRecap: (recap) => set({ recap }),
   setNotice: (notice) => set({ notice }),
+  setElsewhere: (elsewhere) => set({ elsewhere }),
+  setCanInstall: (canInstall) => set({ canInstall }),
 }));

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { install } from '../../app/install';
 import { CITIZEN_BY_ID, CITIZENS, OFFICE_NAMES } from '../../narrative/content/citizens';
 import { DECREES } from '../../narrative/content/decrees';
 import { JESTER_ON } from '../../narrative/content/jester';
@@ -258,6 +259,7 @@ export function SettingsPanel() {
   const game = useUi((s) => s.game);
   const [, refresh] = useState(0);
   const [confirming, setConfirming] = useState(false);
+  const canInstall = useUi((s) => s.canInstall);
   const canPip = useMemo(() => {
     const host = window as unknown as { documentPictureInPicture?: { window: Window | null } };
     return Boolean(host.documentPictureInPicture) && !host.documentPictureInPicture?.window;
@@ -306,7 +308,16 @@ export function SettingsPanel() {
             <div className="radio-row">
               <button className="tab" onClick={float}>Float in a small window</button>
             </div>
-            <p className="empty">Keeps the kingdom above your other windows. Keep this tab open.</p>
+            <p className="empty">Keeps the kingdom above your other windows. Leave this window open behind it.</p>
+          </>
+        )}
+        {canInstall && (
+          <>
+            <h3>Its Own Window</h3>
+            <div className="radio-row">
+              <button className="tab" onClick={() => void install()}>Install as an app</button>
+            </div>
+            <p className="empty">Gives the kingdom its own window and icon, and it works offline. Your kingdom comes with it.</p>
           </>
         )}
         <h3>The Kingdom</h3>

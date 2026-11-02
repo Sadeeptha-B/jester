@@ -47,6 +47,20 @@ function Notice() {
   );
 }
 
+function Elsewhere() {
+  const elsewhere = useUi((s) => s.elsewhere);
+  if (!elsewhere) return null;
+  return (
+    <div className="recap-wrap">
+      <article className="recap parchment" role="status">
+        <p className="recap-kicker">The kingdom is currently</p>
+        <h2>Elsewhere</h2>
+        <p className="recap-sub">It is open in another window, and there is only the one kingdom. Close that window and the show will move here.</p>
+      </article>
+    </div>
+  );
+}
+
 export function App() {
   const panel = useUi((s) => s.panel);
 
@@ -74,6 +88,7 @@ export function App() {
         {panel === 'chronicle' && <Chronicle />}
         <TopBar />
         <Recap />
+        <Elsewhere />
         <Notice />
       </main>
       <Tray />

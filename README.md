@@ -12,8 +12,10 @@ npm run dev        # the kingdom, on http://localhost:5173
 npm run build      # typecheck and production build, into dist/
 ```
 
-There is no backend, account, API key or network dependency. To keep it above
-your other windows, open **Stage → Float in a small window** (Chrome or Edge).
+There is no backend, account, API key or network dependency. Open
+**Stage → Install as an app** for its own window and offline use, or
+**Stage → Float in a small window** to keep it above your other windows
+(both in Chrome or Edge).
 
 Every push to `main` is tested and deployed to GitHub Pages by
 [.github/workflows/deploy.yml](.github/workflows/deploy.yml). The repository's
@@ -23,7 +25,7 @@ Pages source must be set to **GitHub Actions**.
 
 ```sh
 npm test           # simulation, content and persistence, including a 1,000-day soak
-npm run e2e        # the brief's user journeys in Chromium; run `npx playwright install chromium` first
+npm run e2e        # the brief's user journeys and the PWA, in Chromium; run `npx playwright install chromium` first
 ```
 
 ## Development

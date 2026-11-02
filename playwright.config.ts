@@ -11,9 +11,18 @@ export default defineConfig({
     viewport: { width: 480, height: 720 },
     launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
   },
-  webServer: {
-    command: 'npx vite --port 5199 --strictPort',
-    url: 'http://localhost:5199',
-    reuseExistingServer: true,
-  },
+  webServer: [
+    {
+      command: 'npx vite --port 5199 --strictPort',
+      url: 'http://localhost:5199',
+      reuseExistingServer: true,
+    },
+    {
+      // The PWA only exists in a production build, served as Pages serves it.
+      command: 'npm run build && node tests/e2e/serve-dist.mjs',
+      url: 'http://localhost:5198/jester/',
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  ],
 });

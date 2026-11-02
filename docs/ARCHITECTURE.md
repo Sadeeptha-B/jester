@@ -38,6 +38,12 @@ The simulation is run directly by the tests, with no browser.
 
 **Saves alternate between two slots.** A bad write can cost at most one autosave. Saves are validated on load, and a save that fails falls back to the other slot, then to a new kingdom with an in-fiction apology.
 
+**The moment of leaving is saved synchronously.** IndexedDB writes started while a page is unloading often never finish: measured in Chromium, closing a window saved reliably, but navigating away lost the write every time. So `pagehide` writes a third copy to `localStorage`, and the newest valid copy wins on load.
+
+**Only one window runs the kingdom.** A tab and the installed app share storage, so two running at once would overwrite each other's saves. `app/instance.ts` holds a Web Lock for the life of the page. A second window waits, says so, and takes over by itself when the first closes.
+
+**It is a PWA, and updates never interrupt.** `vite-plugin-pwa` precaches everything needed to start offline. A new version downloads quietly and waits until every window has closed, then applies on the next launch, so it takes two launches to appear. A reload alone won't bring it in. Saves are shared across versions, so **any change to the shape of `World` needs a migration** in `persistence/repository.ts`. App icons are generated from the Jester's portrait by `scripts/icons.mjs`.
+
 **Floating copies frames rather than moving the canvas.** In Chromium, a WebGL canvas moved into a Document Picture-in-Picture window keeps a correct buffer but displays black on real GPUs, and the fault doesn't appear under software rendering. So the WebGL canvas stays hidden, and `renderer.showIn` copies each frame to a 2D canvas owned by the floating window. Frames are paced by that window's `requestAnimationFrame`, so hiding the original tab doesn't stop the kingdom. Automated tests cover the copy; floating itself needs a headed browser on a real GPU, so check it by hand after touching this code.
 
 **Plain CSS instead of Tailwind.** The interface is bespoke parchment and woodwork rather than utility layout.
@@ -50,7 +56,8 @@ The simulation is run directly by the tests, with no browser.
 - **The Herald and scenes are one at a time.** A decision waits for any scene already playing, which can take up to a minute.
 - **Citizens share space.** There is no collision avoidance, and bubbles can overlap in a crowded scene.
 - **Sound is synthesised and basic,** and is off by default.
-- **Floating is Chromium-only** and needs the original tab left open. It is not a desktop app.
+- **Floating is Chromium-only** and needs the original tab or app window left open. It is not a desktop app.
+- **`npm audit` reports moderate findings** in build tooling that `vite-plugin-pwa` pulls in. None of it ships: `npm audit --omit=dev` is clean.
 - **The bundle is about 250KB gzipped,** mostly Pixi, and is not code-split.
 - **Performance figures** were taken with software rendering: about 1.4% of a core for script and under 3% for all main-thread work at idle. GPU cost has not been measured on real hardware, and the extra frame copy while floating has not been measured at all.
 

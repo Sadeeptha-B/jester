@@ -6,6 +6,7 @@ import { hourOf, phaseOf, weekday } from '../sim/clock';
 import { Engine } from '../sim/engine';
 import type { World } from '../sim/types';
 import { createWorld } from '../sim/world';
+import { claimKingdom } from './instance';
 import { soundscape } from './sound';
 
 export interface Game {
@@ -48,6 +49,7 @@ function freshWorld(): World {
 
 /** Wires the simulation to the screen and owns the only animation loop. */
 export async function startGame(host: HTMLElement): Promise<Game> {
+  await claimKingdom(useUi.getState().setElsewhere);
   const repo = new SaveRepository(indexedDbStore(), localStorageOrNull());
   if (DEV && params.has('fresh')) await repo.clear();
 

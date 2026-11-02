@@ -16,7 +16,12 @@ export function BubbleLayer({ renderer }: { renderer: WorldRenderer }) {
           continue;
         }
         el.style.visibility = 'visible';
-        el.style.transform = `translate(${Math.round(head.x)}px, ${Math.round(head.y)}px) translate(-50%, -100%)`;
+        // Keep every word on stage, even for someone speaking from the wings.
+        const half = el.offsetWidth / 2;
+        const bounds = el.parentElement!.clientWidth;
+        const x = Math.max(half + 6, Math.min(bounds - half - 6, head.x));
+        const y = Math.max(el.offsetHeight + 26, head.y);
+        el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
       }
     };
     return () => {

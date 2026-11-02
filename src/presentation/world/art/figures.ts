@@ -172,6 +172,30 @@ export const HATS = {
       '...pppppppppp...',
     ],
   },
+  tophat: {
+    sink: 2,
+    rows: [
+      '.....dddddd.....',
+      '.....dddddd.....',
+      '.....dddddd.....',
+      '.....dddddd.....',
+      '.....KKKKKK.....',
+      '...dddddddddd...',
+    ],
+  },
+  plume: {
+    sink: 2,
+    rows: [
+      '..........u.....',
+      '.........uv.....',
+      '........uuv.....',
+      '.......uuv......',
+      '......uuvv......',
+      '....vvvvvvvv....',
+      '...vvvvvvvvvv...',
+      '...YYYYYYYYYY...',
+    ],
+  },
   /** Awarded by decree, usually regretted. */
   crown: {
     sink: 1,

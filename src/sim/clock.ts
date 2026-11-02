@@ -22,7 +22,15 @@ export const hourOf = (clock: Clock) => clock.minute / 60;
 
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
-export const weekday = (day: number) => WEEKDAYS[(day - 1) % 7];
+/** The calendar answers to the law. Abolished days really do vanish from it. */
+export function weekday(day: number, laws: string[] = []): string {
+  if (laws.includes('no_tuesdays')) {
+    const week = WEEKDAYS.filter((d) => d !== 'Tuesday');
+    return week[(day - 1) % week.length];
+  }
+  const name = WEEKDAYS[(day - 1) % 7];
+  return name === 'Tuesday' && laws.includes('tuesday_notice') ? 'Tuesday (by appointment)' : name;
+}
 
 export type Phase = 'Dawn' | 'Morning' | 'Noon' | 'Afternoon' | 'Dusk' | 'Evening' | 'Night';
 

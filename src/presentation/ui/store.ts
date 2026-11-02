@@ -1,8 +1,15 @@
 import { create } from 'zustand';
 import type { Game } from '../../app/game';
 import type { LocationId } from '../../narrative/content/map';
+import type { Dispatch, Mood, Recap } from '../../sim/types';
 
-export type Selection = { kind: 'citizen'; id: string } | { kind: 'location'; id: LocationId } | null;
+export type Selection =
+  | { kind: 'citizen'; id: string }
+  | { kind: 'location'; id: LocationId }
+  | { kind: 'landmark'; id: string }
+  | null;
+
+export type Panel = 'chronicle' | 'decree' | 'settings' | 'jester' | null;
 
 export interface Bubble {
   key: number;
@@ -15,6 +22,7 @@ export interface Status {
   weekday: string;
   phase: string;
   weather: string;
+  holiday: string | null;
 }
 
 interface UiState {
@@ -23,11 +31,28 @@ interface UiState {
   hover: { label: string; x: number; y: number } | null;
   bubbles: Bubble[];
   status: Status;
+  /** The latest thing worth saying, in the tray. */
+  line: { text: string; mood: Mood; id: number } | null;
+  dispatch: Dispatch | null;
+  /** The event id of an open question, if any. */
+  pending: string | null;
+  sceneBusy: boolean;
+  expanded: boolean;
+  panel: Panel;
+  recap: Recap | null;
+  notice: string | null;
   setGame(game: Game): void;
   select(s: Selection): void;
   setHover(h: UiState['hover']): void;
   addBubble(id: string, text: string, ms: number): void;
   setStatus(s: Status): void;
+  say(text: string, mood: Mood): void;
+  setDispatch(d: Dispatch | null): void;
+  setPending(p: string | null, busy: boolean): void;
+  setExpanded(v: boolean): void;
+  openPanel(p: Panel): void;
+  setRecap(r: Recap | null): void;
+  setNotice(n: string | null): void;
 }
 
 let nextKey = 1;
@@ -37,9 +62,17 @@ export const useUi = create<UiState>((set, get) => ({
   selection: null,
   hover: null,
   bubbles: [],
-  status: { day: 1, weekday: 'Monday', phase: 'Dawn', weather: 'clear' },
+  status: { day: 1, weekday: 'Monday', phase: 'Morning', weather: 'clear', holiday: null },
+  line: null,
+  dispatch: null,
+  pending: null,
+  sceneBusy: false,
+  expanded: false,
+  panel: null,
+  recap: null,
+  notice: null,
   setGame: (game) => set({ game }),
-  select: (selection) => set({ selection }),
+  select: (selection) => set({ selection, panel: selection ? null : get().panel }),
   setHover: (hover) => set({ hover }),
   addBubble: (id, text, ms) => {
     const key = nextKey++;
@@ -49,6 +82,20 @@ export const useUi = create<UiState>((set, get) => ({
   },
   setStatus: (status) => {
     const now = get().status;
-    if (now.day !== status.day || now.phase !== status.phase || now.weather !== status.weather || now.weekday !== status.weekday) set({ status });
+    if (now.day !== status.day || now.phase !== status.phase || now.weather !== status.weather || now.weekday !== status.weekday || now.holiday !== status.holiday) set({ status });
   },
+  say: (text, mood) => set({ line: { text, mood, id: nextKey++ } }),
+  setDispatch: (dispatch) => {
+    if (dispatch?.id === get().dispatch?.id) return;
+    set({ dispatch });
+    if (dispatch) set({ line: { text: dispatch.text, mood: dispatch.mood, id: dispatch.id } });
+  },
+  setPending: (pending, sceneBusy) => {
+    const now = get();
+    if (now.pending !== pending || now.sceneBusy !== sceneBusy) set({ pending, sceneBusy });
+  },
+  setExpanded: (expanded) => set({ expanded }),
+  openPanel: (panel) => set({ panel, selection: panel ? null : get().selection, expanded: false }),
+  setRecap: (recap) => set({ recap }),
+  setNotice: (notice) => set({ notice }),
 }));

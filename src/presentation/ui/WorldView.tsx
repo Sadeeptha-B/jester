@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { startGame, type Game } from '../../app/game';
 import { CITIZEN_BY_ID } from '../../narrative/content/citizens';
+import { LANDMARK_BY_ID } from '../../narrative/content/landmarks';
 import { LOCATIONS } from '../../narrative/content/map';
 import { handCursor } from '../world/art/icons';
 import { useUi } from './store';
@@ -58,8 +59,8 @@ export function WorldView() {
         return;
       }
       const hit = renderer.hit(engine.world, p);
-      el.style.cursor = hit.citizen ? open : hit.location ? 'pointer' : 'default';
-      const label = hit.citizen ? CITIZEN_BY_ID[hit.citizen].name : hit.location ? LOCATIONS[hit.location].name : null;
+      el.style.cursor = hit.citizen ? open : hit.location || hit.landmark ? 'pointer' : 'default';
+      const label = hit.citizen ? CITIZEN_BY_ID[hit.citizen].name : hit.landmark ? LANDMARK_BY_ID[hit.landmark].name : hit.location ? LOCATIONS[hit.location].name : null;
       const rect = el.getBoundingClientRect();
       useUi.getState().setHover(label ? { label, x: e.clientX - rect.left, y: e.clientY - rect.top - 12 } : null);
     };
@@ -81,6 +82,7 @@ export function WorldView() {
         const hit = renderer.hit(engine.world, p);
         const { select } = useUi.getState();
         if (hit.citizen) select({ kind: 'citizen', id: hit.citizen });
+        else if (hit.landmark) select({ kind: 'landmark', id: hit.landmark });
         else if (hit.location) select({ kind: 'location', id: hit.location });
         else select(null);
       }

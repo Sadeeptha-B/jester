@@ -82,6 +82,18 @@ export class Motes {
     }
   }
 
+  tomato(x: number, y: number) {
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 8 + Math.random() * 16;
+      this.spawn('spark', x, y, Math.cos(a) * s, Math.sin(a) * s, 0.5 + Math.random() * 0.4, i % 3 ? 'R' : 'r', 2, 2);
+    }
+  }
+
+  drip(x: number, y: number) {
+    this.spawn('spray', x, y, 0, 4, 0.5, 'A');
+  }
+
   firefly(x: number, y: number) {
     this.spawn('firefly', x, y, 0, 0, 5 + Math.random() * 5, 'Y');
   }

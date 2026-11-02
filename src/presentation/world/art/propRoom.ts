@@ -6,6 +6,8 @@ import { LOOKS } from '../../../narrative/content/looks';
 import { BENCHES, LAMPS, LOCATIONS, STRUCTURES, TREES, type BuildingArt } from '../../../narrative/content/map';
 import { bakeBuilding, bench, bush, fenceSegment, lamp, oak, pine } from './buildings';
 import { CHICKEN, citizenFrame, PIGEON, type Facing, type Pose } from './figures';
+import { jesterPortrait } from './portrait';
+import { bakeProp, PROP_ARTS } from './props';
 import { Px } from './px';
 import { bakeTerrain, TERRAIN_MARGIN } from './terrain';
 
@@ -54,6 +56,15 @@ for (const id of ['jester', 'archibald', 'turnip']) {
   ];
   for (const [f, p] of frames) show(turns, citizenFrame(LOOKS[id], f, p), `${f[0]}/${p}`, 3);
 }
+
+const puppet = section('The Jester', true);
+for (const mood of ['smug', 'delight', 'shock', 'scheme', 'bored', 'solemn'] as const) {
+  show(puppet, jesterPortrait(mood, false), mood, 3);
+  show(puppet, jesterPortrait(mood, true), 'talking', 3);
+}
+
+const memorabilia = section('Landmarks and props', true);
+for (const art of PROP_ARTS) show(memorabilia, bakeProp(art), art, 3);
 
 const beasts = section('Animals');
 for (const [name, grid] of Object.entries({ ...CHICKEN }))

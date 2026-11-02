@@ -3,6 +3,7 @@ import { LAMPS, LOCATIONS, SQUARE, type Pt } from '../narrative/content/map';
 import { hourOf, seconds, TICK_S } from './clock';
 import { findPath, nearestWalkable } from './nav';
 import { chance, next, pick, range } from './rng';
+import { tell } from './rumours';
 import type { CitizenState, Cue, EmoteKind, World } from './types';
 import { relation } from './world';
 
@@ -146,7 +147,7 @@ function bystanderChat(world: World, c: CitizenState, cues: Cue[]) {
   const defA = CITIZEN_BY_ID[c.id];
   if (defA.animal || c.plan.mode === 'inside' || c.chatUntil > world.tick) return;
   for (const other of Object.values(world.citizens)) {
-    if (other.id <= c.id || other.inside || other.lifted || other.chatUntil > world.tick) continue;
+    if (other.id <= c.id || other.inside || other.absent || other.staged || other.lifted || other.chatUntil > world.tick) continue;
     if (CITIZEN_BY_ID[other.id].animal || other.plan.mode === 'inside') continue;
     if (Math.abs(other.pos.x - c.pos.x) > 16 || Math.abs(other.pos.y - c.pos.y) > 10) continue;
     if (!chance(world, 0.04)) continue;
@@ -158,6 +159,10 @@ function bystanderChat(world: World, c: CitizenState, cues: Cue[]) {
     c.flip = other.pos.x < c.pos.x;
     other.flip = !c.flip;
     cues.push({ type: 'emote', id: c.id, kind }, { type: 'emote', id: other.id, kind: feeling <= -2 ? 'anger' : 'talk' });
+    if (feeling > -2) {
+      tell(world, c, other, cues);
+      tell(world, other, c, cues);
+    }
     return;
   }
 }
@@ -165,8 +170,13 @@ function bystanderChat(world: World, c: CitizenState, cues: Cue[]) {
 /** Advance one citizen by a tick. */
 export function stepCitizen(world: World, c: CitizenState, order: number, cues: Cue[]) {
   const def = CITIZEN_BY_ID[c.id];
-  if (c.lifted) return;
+  if (c.absent || c.lifted) return;
   if (c.faintUntil > world.tick) return;
+  if (c.staged) {
+    // On stage, citizens walk where the scene sends them and otherwise hold their mark.
+    if (c.path.length) walk(c, (def.speed ?? WALK_SPEED) * TICK_S * 1.2);
+    return;
+  }
   if (c.chatUntil > world.tick) return;
 
   const index = slotIndex(def, hourOf(world.clock), order);
@@ -199,12 +209,12 @@ function quirks(world: World, cues: Cue[]) {
   const gerald = world.citizens.gerald;
   const nearBirds = Math.hypot(percival.pos.x - SQUARE.x, percival.pos.y - (SQUARE.y + 8)) < 40;
   const nearGerald = Math.hypot(percival.pos.x - gerald.pos.x, percival.pos.y - gerald.pos.y) < 26;
-  if (!percival.lifted && (nearBirds || nearGerald) && chance(world, nearGerald ? 0.6 : 0.2)) {
+  if (!percival.lifted && !percival.inside && (nearBirds || nearGerald) && chance(world, nearGerald ? 0.6 : 0.2)) {
     cues.push({ type: 'emote', id: 'percival', kind: 'sweat' });
   }
 
   const archibald = world.citizens.archibald;
-  if (!archibald.inside && !archibald.lifted && archibald.plan.at === 'tower' && chance(world, 0.1)) {
+  if (!archibald.inside && !archibald.lifted && !archibald.staged && archibald.plan.at === 'tower' && chance(world, 0.1)) {
     cues.push({ type: 'flash', x: archibald.pos.x + 8, y: archibald.pos.y - 8 });
     cues.push({ type: 'emote', id: 'archibald', kind: chance(world, 0.3) ? 'star' : 'exclaim' });
     const pip = world.citizens.pip;

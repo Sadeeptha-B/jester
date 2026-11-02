@@ -29,6 +29,8 @@ export interface Citizen {
   /** Shock response to being picked up. */
   faints?: boolean;
   animal?: 'chicken' | 'pigeon';
+  /** Not in the kingdom at first; the story brings them in. */
+  offstage?: boolean;
 }
 
 const TOWER_DOOR = { x: 38, y: 72 };
@@ -101,7 +103,7 @@ export const CITIZENS: Citizen[] = [
   {
     id: 'ignatius',
     name: 'Ignatius Fenn',
-    role: 'Junior Clerk',
+    role: 'Minister of Weather (Acting)',
     traits: ['dutiful', 'resigned', 'optimistic'],
     ambition: 'To reach the front of the queue, which leads to his own desk.',
     door: MINISTRY_DOOR,
@@ -259,7 +261,57 @@ export const CITIZENS: Citizen[] = [
     schedule: [{ from: 0, at: 'square', doing: 'Walking about as though he owns the place', thought: 'Coo.', mode: 'idle' }],
     onLifted: ['Coo.', '(Gerald looks at you with quiet disapproval.)', 'Coo. Coo.'],
   },
+  {
+    id: 'tuesday',
+    name: 'Tuesday',
+    role: 'A Day of the Week',
+    traits: ['melancholy', 'tall', 'wronged'],
+    ambition: 'To be observed.',
+    door: { x: 118, y: 164 },
+    offstage: true,
+    schedule: [
+      { from: 7, at: 'market', doing: 'Looking for somewhere to put a suitcase', thought: 'Nobody has ever looked forward to me.' },
+      { from: 12, at: 'pond', doing: 'Being slightly later than Monday', thought: 'I was only ever a bridge.', mode: 'pace' },
+      { from: 16, at: 'tavern', doing: 'Nursing a small sad beer', thought: 'Everyone says "is it only Tuesday?" Only.' },
+      { from: 21, at: 'home', doing: 'Lying awake until Wednesday', thought: 'It will not be long now.', mode: 'inside' },
+    ],
+    onLifted: ['Oh. Is it over?', 'I expected no less.', 'This is the most anyone has done for me.'],
+  },
+  {
+    id: 'visitor',
+    name: 'The Mysterious Visitor',
+    role: 'Person from Elsewhere-Else',
+    traits: ['cryptic', 'overdressed', 'unexplained'],
+    ambition: 'Declined to state.',
+    door: { x: 136, y: 160 },
+    offstage: true,
+    schedule: [
+      { from: 7, at: 'square', doing: 'Standing in the square, meaningfully', thought: 'So this is the place.', mode: 'pace' },
+      { from: 13, at: 'market', doing: 'Examining a parsnip as if it were a letter', thought: 'Interesting. Interesting.' },
+      { from: 18, at: 'tavern', doing: 'Paying for drinks in a currency of questions', thought: 'They do not suspect a thing. Neither do I.' },
+      { from: 22, at: 'home', doing: 'Whereabouts unknown', thought: 'Unknown.', mode: 'inside' },
+    ],
+    onLifted: ['Ah. You are as they described.', 'So it is true.', 'I shall mention this. To whom, I cannot say.'],
+  },
 ];
+
+/** The kingdom's offices, each of which is somebody's problem. */
+export const OFFICE_NAMES: Record<string, string> = {
+  weather: 'Minister of Weather',
+  order: 'Minister of Order',
+  wizard: 'Royal Wizard',
+  philosopher: 'Royal Philosopher',
+  vegetables: 'Keeper of the Royal Vegetables',
+  regent: 'Regent of Elsewhere',
+};
+
+export const INITIAL_OFFICES: Record<string, string> = {
+  // Ignatius holds the post. His desk is at the front of the queue he is in.
+  weather: 'ignatius',
+  order: 'beatrice',
+  wizard: 'archibald',
+  vegetables: 'turnip',
+};
 
 export const CITIZEN_BY_ID: Record<string, Citizen> = Object.fromEntries(CITIZENS.map((c) => [c.id, c]));
 

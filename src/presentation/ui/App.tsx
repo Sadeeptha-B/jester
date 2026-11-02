@@ -1,13 +1,25 @@
 import { useUi } from './store';
 import { WorldView } from './WorldView';
 import { Inspect } from './Inspect';
+import { Chronicle, DecreePanel, JesterPanel, Recap, SettingsPanel } from './Panels';
+import { Tray } from './Tray';
 
 function TopBar() {
   const status = useUi((s) => s.status);
+  const panel = useUi((s) => s.panel);
+  const openPanel = useUi((s) => s.openPanel);
+  const toggle = (p: NonNullable<typeof panel>) => openPanel(panel === p ? null : p);
   return (
     <header className="topbar">
-      <span className="date">Day {status.day} · {status.weekday}</span>
-      <span className="phase">{status.phase}</span>
+      <div className="date">
+        <span>Day {status.day} · {status.weekday}</span>
+        <span className="phase">{status.holiday ?? status.phase}</span>
+      </div>
+      <nav className="tools">
+        <button onClick={() => toggle('decree')} aria-pressed={panel === 'decree'}>Decree</button>
+        <button onClick={() => toggle('chronicle')} aria-pressed={panel === 'chronicle'}>Gazette</button>
+        <button onClick={() => toggle('settings')} aria-pressed={panel === 'settings'} aria-label="Settings">Stage</button>
+      </nav>
     </header>
   );
 }
@@ -22,15 +34,35 @@ function HoverName() {
   );
 }
 
+function Notice() {
+  const notice = useUi((s) => s.notice);
+  const setNotice = useUi((s) => s.setNotice);
+  if (!notice) return null;
+  return (
+    <div className="notice parchment" role="alert">
+      <p>{notice}</p>
+      <button className="linkish" onClick={() => setNotice(null)}>Very well</button>
+    </div>
+  );
+}
+
 export function App() {
+  const panel = useUi((s) => s.panel);
   return (
     <div className="app">
-      <div className="stage">
+      <main className="stage">
         <WorldView />
         <HoverName />
-        <TopBar />
         <Inspect />
-      </div>
+        {panel === 'decree' && <DecreePanel />}
+        {panel === 'settings' && <SettingsPanel />}
+        {panel === 'jester' && <JesterPanel />}
+        {panel === 'chronicle' && <Chronicle />}
+        <TopBar />
+        <Recap />
+        <Notice />
+      </main>
+      <Tray />
     </div>
   );
 }

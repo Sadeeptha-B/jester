@@ -1,11 +1,12 @@
-import { CITIZENS, INITIAL_RELATIONS } from '../narrative/content/citizens';
+import { CITIZENS, INITIAL_OFFICES, INITIAL_RELATIONS } from '../narrative/content/citizens';
 import { LAMPS, LOCATIONS } from '../narrative/content/map';
+import { seconds } from './clock';
 import type { CitizenState, World } from './types';
 
 export const relationKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 export function relation(world: World, a: string, b: string): number {
-  return world.relations[relationKey(a, b)] ?? 0;
+  return world.relations[relationKey(a, b)]?.value ?? 0;
 }
 
 export function createWorld(seed: number): World {
@@ -23,6 +24,8 @@ export function createWorld(seed: number): World {
       until: 0,
       slot: -1,
       inside: false,
+      absent: Boolean(c.offstage),
+      staged: false,
       lifted: false,
       faintUntil: 0,
       chatUntil: 0,
@@ -30,10 +33,13 @@ export function createWorld(seed: number): World {
       liftCount: 0,
       deeds: [],
       route: 0,
+      hat: undefined,
+      epithets: [],
+      belief: null,
     };
   }
-  const relations: Record<string, number> = {};
-  for (const [a, b, v] of INITIAL_RELATIONS) relations[relationKey(a, b)] = v;
+  const relations: World['relations'] = {};
+  for (const [a, b, value] of INITIAL_RELATIONS) relations[relationKey(a, b)] = { value };
 
   return {
     version: 1,
@@ -46,5 +52,36 @@ export function createWorld(seed: number): World {
     citizens,
     relations,
     lamps: LAMPS.map(() => false),
+    flags: {},
+    offices: { ...INITIAL_OFFICES },
+    laws: [],
+    landmarks: [],
+    arcs: {},
+    facts: [],
+    chronicle: [],
+    eras: [{ name: 'The Age of Nothing in Particular', fromDay: 1 }],
+    rumours: [],
+    nextId: 1,
+    scene: null,
+    queue: [],
+    props: [],
+    pending: null,
+    dispatch: null,
+    holiday: null,
+    director: {
+      nextAmbient: seconds(60),
+      nextIncident: seconds(240),
+      nextDecision: seconds(600),
+      nextQuip: seconds(45),
+      recent: [],
+      lastLead: null,
+      lastSeen: {},
+      opening: 0,
+      quips: [],
+      troubleDay: 0,
+    },
+    settings: { pacing: 'balanced', sound: false, motion: 'full' },
+    recap: null,
+    savedAt: 0,
   };
 }

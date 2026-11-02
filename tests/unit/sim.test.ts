@@ -109,7 +109,7 @@ describe('citizens', () => {
         if (Math.hypot(c.pos.x - start[c.id].x, c.pos.y - start[c.id].y) > 8) moved.add(c.id);
       }
     }
-    expect(moved.size).toBe(CITIZENS.length);
+    expect(moved.size).toBe(CITIZENS.filter((c) => !c.offstage).length);
   });
 });
 

@@ -1,6 +1,7 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from 'pixi.js';
 import { CITIZEN_BY_ID, CITIZENS } from '../../narrative/content/citizens';
-import { BENCHES, LAMPS, LOCATIONS, POND, SLAB_H, SLAB_W, STRUCTURES, TREES, type LocationId, type Pt } from '../../narrative/content/map';
+import { LANDMARK_BY_ID } from '../../narrative/content/landmarks';
+import { BENCHES, LAMPS, LOCATIONS, PLOTS, POND, SLAB_H, SLAB_W, SQUARE, STRUCTURES, TREES, type LocationId, type Pt } from '../../narrative/content/map';
 import { hourOf } from '../../sim/clock';
 import type { Cue, EmoteKind, World } from '../../sim/types';
 import { Flock, FIREFLY_SPOTS, Motes } from './ambience';
@@ -8,6 +9,7 @@ import { bakeBuilding, bench, bush, lamp, oak, pine } from './art/buildings';
 import { PIGEON, type Pose } from './art/figures';
 import { EMOTE_KINDS, emoteIcon, footShadow, pennant } from './art/icons';
 import { PALETTE, type Colour } from './art/palette';
+import { bakeProp, umbrella } from './art/props';
 import { Px } from './art/px';
 import { bakeTerrain, SOIL_DEPTH, TERRAIN_MARGIN } from './art/terrain';
 import { cloud, curtainPanel, daySky, duskSky, footlight, hillFlat, moonDisc, nightSky, sideDrape, stageBoards, sunDisc, valance } from './art/theatre';
@@ -40,6 +42,8 @@ interface CitizenView {
   shadow: Sprite;
   body: Sprite;
   emote: Sprite;
+  brolly: Sprite;
+  hat: string | null | undefined;
   emoteUntil: number;
   x: number;
   y: number;
@@ -58,7 +62,10 @@ interface WindowGlow {
 export interface Hit {
   citizen?: string;
   location?: LocationId;
+  landmark?: string;
 }
+
+const ZOOM = 1.9;
 
 export class WorldRenderer {
   private set = new Container();
@@ -100,6 +107,15 @@ export class WorldRenderer {
   private curtainR!: Sprite;
   private footGlows: Sprite[] = [];
   private spell = new Sprite(this.glow);
+  private history = new Map<string, Sprite>();
+  private historySig = '';
+  private propSig = '';
+  private propSprites: Sprite[] = [];
+  private bunting: Sprite;
+  /** Current and intended view, as logical-pixel centre and zoom. */
+  private lens = { x: 0, y: 0, zoom: 1 };
+  private lensTarget: { x: number; y: number; zoom: number } | null = null;
+  private low = false;
 
   private logW = BASE_W;
   private logH = BASE_H;
@@ -133,6 +149,12 @@ export class WorldRenderer {
     });
     for (const kind of EMOTE_KINDS) this.emoteTextures.set(kind, textureOf(emoteIcon(kind)));
     this.buildCitizens();
+    this.bunting = new Sprite(textureOf(bakeProp('bunting')));
+    this.bunting.anchor.set(0.5, 1);
+    this.bunting.position.set(SQUARE.x, SQUARE.y - 14);
+    this.bunting.zIndex = 1400;
+    this.bunting.visible = false;
+    this.entities.addChild(this.bunting);
 
     this.scene.addChild(this.set, this.slab, this.front);
     this.spell.anchor.set(0.5);
@@ -288,7 +310,9 @@ export class WorldRenderer {
 
   private buildCitizens() {
     const shadowTex = textureOf(footShadow(10));
-    for (const def of CITIZENS) {
+    const canopies: [Colour, Colour][] = [['r', 'R'], ['u', 'A'], ['y', 'o'], ['p', 'P'], ['a', 'A'], ['o', 'y']];
+    const brollies = canopies.map(([c, s]) => textureOf(umbrella(c, s)));
+    for (const [i, def] of CITIZENS.entries()) {
       const root = new Container();
       const shadow = new Sprite(shadowTex);
       shadow.anchor.set(0.5);
@@ -301,9 +325,13 @@ export class WorldRenderer {
       emote.anchor.set(0.5, 1);
       emote.y = -24;
       emote.visible = false;
-      root.addChild(shadow, body, emote);
+      const brolly = new Sprite(brollies[i % brollies.length]);
+      brolly.anchor.set(0.5, 1);
+      brolly.y = -18;
+      brolly.visible = false;
+      root.addChild(shadow, body, brolly, emote);
       this.entities.addChild(root);
-      this.citizens.set(def.id, { id: def.id, root, shadow, body, emote, emoteUntil: 0, x: NaN, y: NaN, walked: 0, height: 0, landed: 0 });
+      this.citizens.set(def.id, { id: def.id, root, shadow, body, emote, brolly, hat: undefined, emoteUntil: 0, x: NaN, y: NaN, walked: 0, height: 0, landed: 0 });
     }
   }
 
@@ -321,6 +349,8 @@ export class WorldRenderer {
     this.slabY = this.logH - (SLAB_H + SOIL_DEPTH + FRONT_BOARDS);
     this.slab.position.set(this.slabX, this.slabY);
     this.lightSlab.position.set(this.slabX, this.slabY);
+    this.lens = { x: this.logW / 2, y: this.logH / 2, zoom: 1 };
+    this.lensTarget = null;
     this.worldRT.resize(this.logW, this.logH);
     this.lightRT.resize(this.logW, this.logH);
     this.presenter.setTextures(this.worldRT, this.lightRT);
@@ -429,18 +459,47 @@ export class WorldRenderer {
 
   // ---- input helpers ------------------------------------------------------
 
+  private lensBox(): [number, number, number] {
+    const z = 1 / this.lens.zoom;
+    const u = Math.max(0, Math.min(1 - z, this.lens.x / this.logW - z / 2));
+    const v = Math.max(0, Math.min(1 - z, this.lens.y / this.logH - z / 2));
+    return [u, v, z];
+  }
+
   /** Client coordinates to slab coordinates. */
   toWorld(clientX: number, clientY: number): Pt {
     const rect = this.host.getBoundingClientRect();
+    const [u, v, z] = this.lensBox();
     return {
-      x: (clientX - rect.left) / this.pixelScale - this.slabX,
-      y: (clientY - rect.top) / this.pixelScale - this.slabY,
+      x: (u + ((clientX - rect.left) / rect.width) * z) * this.logW - this.slabX,
+      y: (v + ((clientY - rect.top) / rect.height) * z) * this.logH - this.slabY,
     };
   }
 
   /** Slab coordinates to CSS pixels within the host. */
   project(x: number, y: number): Pt {
-    return { x: (x + this.slabX) * this.pixelScale, y: (y + this.slabY) * this.pixelScale };
+    const [u, v, z] = this.lensBox();
+    return {
+      x: (((x + this.slabX) / this.logW - u) / z) * this.host.clientWidth,
+      y: (((y + this.slabY) / this.logH - v) / z) * this.host.clientHeight,
+    };
+  }
+
+  /** Fly the lens to a spot. It only ever moves because someone asked. */
+  flyTo(p: Pt) {
+    this.lensTarget = { x: p.x + this.slabX, y: p.y + this.slabY, zoom: ZOOM };
+  }
+
+  flyHome() {
+    this.lensTarget = { x: this.logW / 2, y: this.logH / 2, zoom: 1 };
+  }
+
+  get zoomed() {
+    return this.lens.zoom > 1.02;
+  }
+
+  setLowMotion(low: boolean) {
+    this.low = low;
   }
 
   /** Where a citizen is on screen, with a head offset for bubbles. */
@@ -458,7 +517,7 @@ export class WorldRenderer {
     let best: string | undefined;
     let bestY = -Infinity;
     for (const c of Object.values(world.citizens)) {
-      if (c.inside) continue;
+      if (c.inside || c.absent) continue;
       const animal = CITIZEN_BY_ID[c.id].animal;
       const halfW = animal ? 7 : 7;
       const tall = animal ? 12 : 21;
@@ -468,6 +527,10 @@ export class WorldRenderer {
       }
     }
     if (best) return { citizen: best };
+    for (const l of world.landmarks) {
+      const plot = PLOTS[l.plot];
+      if (Math.abs(p.x - plot.x) <= 12 && p.y <= plot.y + 3 && p.y >= plot.y - 30) return { landmark: l.id };
+    }
     for (let i = STRUCTURES.length - 1; i >= 0; i--) {
       const s = STRUCTURES[i];
       const f = s.foot;
@@ -498,8 +561,55 @@ export class WorldRenderer {
         this.spell.position.set(cue.x, cue.y - 10);
         this.spell.alpha = 1;
         break;
+      case 'tomato': {
+        const v = this.citizens.get(cue.id);
+        if (v) this.motes.tomato(v.x, v.y - 18);
+        break;
+      }
       default:
     }
+  }
+
+  /** History is drawn from state: rebuild the monuments whenever the record changes. */
+  private drawHistory(world: World) {
+    const sig = world.landmarks.map((l) => `${l.id}:${l.plot}:${l.size ?? 0}`).join('|');
+    if (sig !== this.historySig) {
+      const first = this.historySig === '';
+      this.historySig = sig;
+      for (const [id, sprite] of this.history) {
+        this.entities.removeChild(sprite);
+        sprite.destroy();
+        this.history.delete(id);
+      }
+      for (const l of world.landmarks) {
+        const def = LANDMARK_BY_ID[l.id];
+        const plot = PLOTS[l.plot];
+        const sprite = new Sprite(textureOf(bakeProp(def.art, l.size)));
+        sprite.anchor.set(0.5, 1);
+        sprite.position.set(plot.x, plot.y);
+        sprite.zIndex = plot.y;
+        this.entities.addChild(sprite);
+        this.history.set(l.id, sprite);
+        if (!first) this.motes.puff(plot.x, plot.y);
+      }
+    }
+    const propSig = world.props.map((p) => `${p.art}:${p.x}:${p.y}`).join('|');
+    if (propSig !== this.propSig) {
+      this.propSig = propSig;
+      for (const s of this.propSprites) {
+        this.entities.removeChild(s);
+        s.destroy();
+      }
+      this.propSprites = world.props.map((p) => {
+        const sprite = new Sprite(textureOf(bakeProp(p.art)));
+        sprite.anchor.set(0.5, 1);
+        sprite.position.set(p.x, p.y);
+        sprite.zIndex = p.y;
+        this.entities.addChild(sprite);
+        return sprite;
+      });
+    }
+    this.bunting.visible = world.holiday !== null;
   }
 
   setCurtain(open: boolean, instant = false) {
@@ -520,6 +630,7 @@ export class WorldRenderer {
 
     this.drawSky(hour, world, dt);
     this.drawTown(world, hour, night, dt);
+    this.drawHistory(world);
     this.drawCitizens(world, dt);
     this.drawWeather(world, night, dt);
 
@@ -544,9 +655,21 @@ export class WorldRenderer {
     r.render({ container: this.scene, target: this.worldRT, clear: true });
     r.render({ container: this.lightScene, target: this.lightRT, clear: true, clearColor: [0, 0, 0, 1] });
 
+    if (this.lensTarget) {
+      const k = Math.min(1, dt * 4);
+      const t = this.lensTarget;
+      this.lens.x += (t.x - this.lens.x) * k;
+      this.lens.y += (t.y - this.lens.y) * k;
+      this.lens.zoom += (t.zoom - this.lens.zoom) * k;
+      if (Math.abs(this.lens.zoom - t.zoom) < 0.004) {
+        this.lens = { ...t };
+        this.lensTarget = null;
+      }
+    }
+
     const fog = world.weather === 'fog' ? 0.4 : 0;
     const res = this.app.renderer.resolution;
-    this.presenter.update([this.logW, this.logH], this.pixelScale * res, [0, 0, 1], gradeAt(hour, world.weather), fog, this.time);
+    this.presenter.update([this.logW, this.logH], this.pixelScale * res, this.lensBox(), gradeAt(hour, world.weather), fog, this.time);
     r.render({ container: this.present });
     this.onFrame?.();
   }
@@ -621,11 +744,12 @@ export class WorldRenderer {
     for (const t of this.trees) t.sprite.texture = Math.sin(this.time * 0.9 + t.phase) > 0.5 ? t.b : t.a;
     for (const p of this.pennants) p.sprite.texture = Math.sin(this.time * 5 + p.phase) > 0 ? p.a : p.b;
 
-    if (Math.random() < dt * 2.6 && this.chimneys.length) {
+    const busy = this.low ? 0.3 : 1;
+    if (Math.random() < dt * 2.6 * busy && this.chimneys.length) {
       const c = this.chimneys[Math.floor(Math.random() * this.chimneys.length)];
       this.motes.smoke(c.x, c.y);
     }
-    if (Math.random() < dt * 14) this.motes.spray(136, 103);
+    if (Math.random() < dt * 14 * busy) this.motes.spray(136, 103);
     if (Math.random() < dt * 1.6) {
       const a = Math.random() * Math.PI * 2;
       this.motes.sparkle(POND.x + Math.cos(a) * POND.rx * Math.random(), POND.y + Math.sin(a) * POND.ry * Math.random());
@@ -656,8 +780,8 @@ export class WorldRenderer {
   private drawCitizens(world: World, dt: number) {
     for (const c of Object.values(world.citizens)) {
       const v = this.citizens.get(c.id)!;
-      v.root.visible = !c.inside;
-      if (c.inside) {
+      v.root.visible = !c.inside && !c.absent;
+      if (c.inside || c.absent) {
         v.x = NaN;
         continue;
       }
@@ -685,9 +809,15 @@ export class WorldRenderer {
       else if (c.faintUntil > world.tick) pose = 'flat';
       else if (walking) pose = (['stand', 'walk1', 'stand', 'walk3'] as const)[Math.floor(v.walked / 2.6) % 4];
 
-      const sheet = sheetFor(c.id);
+      const sheet = sheetFor(c.id, c.hat);
       v.body.texture = sheet.frame(c.lifted ? 'front' : c.facing, pose);
       const animal = CITIZEN_BY_ID[c.id].animal;
+
+      // Rain is a matter of law: umbrellas when allowed, a visible soaking when not.
+      const raining = world.weather === 'rain' && !animal;
+      const banned = world.laws.includes('umbrella_ban');
+      v.brolly.visible = raining && !banned && !c.lifted && pose !== 'flat';
+      if (raining && banned && !this.low && Math.random() < dt * 3) this.motes.drip(v.x + (Math.random() - 0.5) * 8, v.y - 10);
       const sideways = c.facing === 'side' || animal;
       v.body.scale.x = sideways && c.flip ? -1 : 1;
 

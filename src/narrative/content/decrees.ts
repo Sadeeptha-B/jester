@@ -1,0 +1,61 @@
+import { emote, flash, fx, gather, go, prop, say, type DecreeDef } from '../schema';
+
+/** The Royal Decrees: what the Absentee Monarch can do when feeling present. */
+export const DECREES: DecreeDef[] = [
+  {
+    id: 'artifact',
+    label: 'Introduce a Mysterious Artifact',
+    blurb: 'Nobody will know where it came from. That includes you.',
+    herald: 'By decree of the Throne, there is now a Mysterious Artifact. Please do not lick it.',
+    beats: [prop('artifact', 'plot1'), emote('crowd1', 'exclaim'), say('crowd2', 'Did the Throne say "lick"?'), emote('crowd3', 'question')],
+    effects: [fx.landmark('artifact'), fx.fact('artifact', 'the Unexplained Object you dropped on us, which hums'), fx.chronicle('By royal decree, a Mysterious Artifact appeared near the castle.', 2, 'decision')],
+    dispatch: { title: 'By Royal Decree', text: 'The Artifact has arrived. It hums in the key of a question. Archibald claims he summoned it, and Pip has quietly moved it away from the powder.' },
+  },
+  {
+    id: 'holiday',
+    label: 'Declare a Holiday',
+    blurb: 'For what? They will work that out.',
+    herald: 'The Throne declares a holiday! In celebration of a thing. You are to enjoy it, by order.',
+    beats: [emote('crowd1', 'note'), emote('crowd2', 'note'), say('crowd3', 'Is it for me?'), say('crowd4', 'Nobody knows. Dance anyway.')],
+    effects: [fx.holiday('A Royal Holiday', 1), fx.chronicle('By royal decree, a holiday was declared for no stated reason.', 1, 'decision')],
+    dispatch: { title: 'By Royal Decree', text: 'A holiday has been declared. Bunting has been found. The kingdom is celebrating, with the slight unease of people who do not know what it did right.' },
+  },
+  {
+    id: 'visitor',
+    label: 'Summon a Strange Visitor',
+    blurb: 'Someone will arrive. It may be your fault.',
+    herald: 'The Throne has summoned a Visitor. Do not stare. It is already looking at you.',
+    beats: [emote('crowd1', 'exclaim'), say('crowd2', 'Who is that? Where did they come from?')],
+    effects: [fx.arrive('visitor'), fx.flag('visitor_here'), fx.fact('visitor', 'that visitor of yours, who has not explained anything'), fx.chronicle('By royal decree, a Mysterious Visitor arrived in the square.', 2, 'decision')],
+    dispatch: { title: 'By Royal Decree', text: 'A stranger has arrived in the square and will not say why. It has asked to see the kingdom’s records, and has asked Percival if he has "noticed the sky". He has gone a bit pale.' },
+  },
+  {
+    id: 'weather',
+    label: 'Change the Weather',
+    blurb: 'Over the head of the Minister. Literally.',
+    option: 'weather',
+    herald: 'By order of the Throne, the weather has been changed! Do not ask how. The Minister of Weather has not been told.',
+    beats: [emote('crowd1', 'question'), say('crowd2', 'Can it do that?'), say('crowd3', 'It seems to have.')],
+    effects: [fx.chronicle('By royal decree, the weather was changed.', 1, 'decision')],
+    dispatch: { title: 'By Royal Decree', text: 'The weather has changed, by order. {office:weather}, Minister of Weather, says this was the plan all along.' },
+  },
+  {
+    id: 'appointment',
+    label: 'Appoint Someone',
+    blurb: 'To a post. They will have to live with it.',
+    option: 'appointment',
+    herald: 'The Throne appoints {subject} to the office of {office}! Congratulations, and we are sorry.',
+    beats: [go('subject', 'square'), emote('subject', 'exclaim')],
+    effects: [fx.appoint('$office', '$subject'), fx.deed('$subject', 'Was given a job by a voice from the sky.')],
+    dispatch: { title: 'By Royal Decree', text: '{subject} is now {office}. I have seen them take the news, and I think it best not to ask.' },
+  },
+  {
+    id: 'gathering',
+    label: 'Call a Gathering',
+    blurb: 'Bring everyone together, and see what happens.',
+    herald: 'The Throne calls a Gathering! All citizens will stand near each other, and see what comes of it.',
+    beats: [gather(['crowd1', 'crowd2', 'crowd3', 'crowd4'], 'square'), say('crowd1', 'So... do you come here often?'), emote('crowd2', 'love'), emote('crowd3', 'anger'), say('crowd4', 'I would like it noted that this was a mistake.'), flash('herald')],
+    effects: [fx.rel('$crowd1', '$crowd2', 1), fx.rel('$crowd3', '$crowd4', -1), fx.chronicle('By royal decree, a Gathering was held. It went about as well as those things go.', 1, 'decision')],
+    dispatch: { title: 'By Royal Decree', text: 'The Gathering has taken place. Two friendships began, one ended, and someone has lost a hat.' },
+  },
+];

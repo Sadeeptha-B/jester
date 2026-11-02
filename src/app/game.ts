@@ -27,6 +27,15 @@ const DEV = import.meta.env.DEV;
 const AUTOSAVE_MS = 30_000;
 const prefersCalm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** Reading localStorage can throw when site data is blocked. */
+function localStorageOrNull(): Storage | null {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function newSeed() {
   return DEV && params.has('seed') ? Number(params.get('seed')) : (Math.random() * 2 ** 32) >>> 0;
 }
@@ -39,7 +48,7 @@ function freshWorld(): World {
 
 /** Wires the simulation to the screen and owns the only animation loop. */
 export async function startGame(host: HTMLElement): Promise<Game> {
-  const repo = new SaveRepository(indexedDbStore());
+  const repo = new SaveRepository(indexedDbStore(), localStorageOrNull());
   if (DEV && params.has('fresh')) await repo.clear();
 
   const loaded = await repo.load().catch(() => null);
@@ -78,8 +87,11 @@ export async function startGame(host: HTMLElement): Promise<Game> {
   /** Whichever window is on screen paces the frames: this one, or the floating one. */
   let clock: Window = window;
 
+  /** Set once this kingdom has been ended, so that it can't save itself back into being. */
+  let ended = false;
+
   const persist = () => {
-    void repo.save(world);
+    if (!ended) void repo.save(world);
   };
 
   const showRecap = () => {
@@ -155,7 +167,9 @@ export async function startGame(host: HTMLElement): Promise<Game> {
     }
     run();
   });
-  addEventListener('pagehide', persist);
+  addEventListener('pagehide', () => {
+    if (!ended) repo.saveLastWords(world);
+  });
   setInterval(() => {
     if (!document.hidden) persist();
   }, AUTOSAVE_MS);
@@ -165,6 +179,7 @@ export async function startGame(host: HTMLElement): Promise<Game> {
     renderer,
     save: persist,
     restart: async () => {
+      ended = true;
       await repo.clear();
       location.reload();
     },

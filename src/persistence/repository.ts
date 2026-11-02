@@ -35,6 +35,10 @@ export function memoryStore(): KeyValue & { data: Map<string, unknown> } {
 }
 
 const SLOTS = ['slotA', 'slotB'] as const;
+const LAST_WORDS = 'jester-last-words';
+
+/** The part of localStorage a repository needs. */
+export type SyncStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export interface Loaded {
   world: World;
@@ -55,17 +59,34 @@ function migrate(save: Record<string, unknown>): Record<string, unknown> {
   return current;
 }
 
-/** Saves alternate between two slots, so one bad write can never cost the whole kingdom. */
+/**
+ * Saves alternate between two slots, so one bad write can never cost the whole kingdom.
+ * IndexedDB can't be trusted to finish while a page is going away, so the moment of
+ * leaving is written synchronously instead, as a third copy.
+ */
 export class SaveRepository {
   private next = 0;
 
-  constructor(private store: KeyValue) {}
+  constructor(
+    private store: KeyValue,
+    private sync: SyncStore | null = null,
+  ) {}
 
   async save(world: World, now = Date.now()) {
     world.savedAt = now;
     const slot = SLOTS[this.next];
     this.next = (this.next + 1) % SLOTS.length;
     await this.store.set(slot, JSON.stringify(world));
+  }
+
+  /** For the page's last moments, when only synchronous work is sure to finish. */
+  saveLastWords(world: World, now = Date.now()) {
+    world.savedAt = now;
+    try {
+      this.sync?.setItem(LAST_WORDS, JSON.stringify(world));
+    } catch {
+      // Storage full or forbidden: the regular autosave still stands.
+    }
   }
 
   private read(raw: unknown): World | null {
@@ -82,14 +103,18 @@ export class SaveRepository {
     const present = raws.filter((r) => r !== undefined).length;
     const worlds = raws.map((r) => this.read(r));
     const valid = worlds.map((w, i) => ({ w, i })).filter((x) => x.w) as { w: World; i: number }[];
-    if (!valid.length) return present ? { world: null as unknown as World, recovered: true } : null;
     valid.sort((a, b) => b.w.savedAt - a.w.savedAt);
     // Keep writing over the older slot.
-    this.next = (valid[0].i + 1) % SLOTS.length;
-    return { world: valid[0].w, recovered: valid.length < present };
+    if (valid.length) this.next = (valid[0].i + 1) % SLOTS.length;
+
+    const lastWords = this.read(this.sync?.getItem(LAST_WORDS) ?? undefined);
+    const newest = lastWords && lastWords.savedAt > (valid[0]?.w.savedAt ?? -1) ? lastWords : valid[0]?.w;
+    if (!newest) return present ? { world: null as unknown as World, recovered: true } : null;
+    return { world: newest, recovered: valid.length < present };
   }
 
   async clear() {
+    this.sync?.removeItem(LAST_WORDS);
     await Promise.all(SLOTS.map((s) => this.store.remove(s)));
   }
 }

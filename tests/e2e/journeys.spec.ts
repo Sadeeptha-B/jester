@@ -153,10 +153,8 @@ test('clicking inspects a citizen, a building and a monument', async ({ page }) 
   await expect(page.locator('.card h3')).toHaveText('The Royal Castle');
 });
 
-test('a corrupt save is survived with an apology', async ({ page }) => {
-  await page.goto('/?fresh&seed=7&nocurtain');
-  await page.waitForFunction('window.jester');
-  await page.evaluate(`new Promise((done) => {
+const corruptSlot = (page: Page) =>
+  page.evaluate(`new Promise((done) => {
     const open = indexedDB.open('jester', 1);
     open.onsuccess = () => {
       const tx = open.result.transaction('saves', 'readwrite');
@@ -164,7 +162,22 @@ test('a corrupt save is survived with an apology', async ({ page }) => {
       tx.oncomplete = () => { open.result.close(); done(null); };
     };
   })`);
-  await page.addInitScript(() => addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true));
+
+test('a corrupt save is rescued by the copy made on the way out', async ({ page }) => {
+  await page.goto('/?fresh&seed=7&nocurtain');
+  await page.waitForFunction('window.jester');
+  await corruptSlot(page);
+  await page.goto('/?nocurtain');
+  await expect(page.getByText(/restored an earlier copy/)).toBeVisible();
+  await page.waitForFunction('window.jester');
+  expect(await world(page, 'seed')).toBe(7);
+});
+
+test('losing every copy is survived with an apology', async ({ page }) => {
+  await page.goto('/?fresh&seed=7&nocurtain');
+  await page.waitForFunction('window.jester');
+  await corruptSlot(page);
+  await page.addInitScript(() => localStorage.removeItem('jester-last-words'));
   await page.goto('/?nocurtain');
   await expect(page.getByText(/Mice have eaten the archives/)).toBeVisible();
   await page.getByRole('button', { name: 'Very well' }).click();

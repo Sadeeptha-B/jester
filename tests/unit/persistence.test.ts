@@ -9,6 +9,78 @@ const played = (seed: number, ticks = 2000) => {
   return e.world;
 };
 
+function syncStore() {
+  const data = new Map<string, string>();
+  return {
+    data,
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+  };
+}
+
+describe('last words', () => {
+  it('prefers the save made on the way out over an older autosave', async () => {
+    const store = memoryStore();
+    const sync = syncStore();
+    const repo = new SaveRepository(store, sync);
+    const world = played(3, 100);
+    await repo.save(world, 1000);
+    world.clock.day = 44;
+    repo.saveLastWords(world, 2000);
+    const loaded = await new SaveRepository(store, sync).load();
+    expect(loaded!.world.clock.day).toBe(44);
+    expect(loaded!.recovered).toBe(false);
+  });
+
+  it('keeps a kingdom that never reached its first autosave', async () => {
+    const sync = syncStore();
+    new SaveRepository(memoryStore(), sync).saveLastWords(played(3, 50), 1000);
+    expect((await new SaveRepository(memoryStore(), sync).load())!.world.seed).toBe(3);
+  });
+
+  it('ignores them when a regular save is newer', async () => {
+    const store = memoryStore();
+    const sync = syncStore();
+    const repo = new SaveRepository(store, sync);
+    const world = played(3, 100);
+    repo.saveLastWords(world, 1000);
+    world.clock.day = 44;
+    await repo.save(world, 2000);
+    expect((await new SaveRepository(store, sync).load())!.world.clock.day).toBe(44);
+  });
+
+  it('shrugs off corrupt last words, without raising the alarm', async () => {
+    const store = memoryStore();
+    const sync = syncStore();
+    await new SaveRepository(store, sync).save(played(3, 100), 1000);
+    sync.setItem('jester-last-words', '{"version":1,"trunc');
+    const loaded = await new SaveRepository(store, sync).load();
+    expect(loaded!.world.seed).toBe(3);
+    expect(loaded!.recovered).toBe(false);
+  });
+
+  it('survives storage refusing to write', () => {
+    const sync = {
+      ...syncStore(),
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+    expect(() => new SaveRepository(memoryStore(), sync).saveLastWords(played(3, 50))).not.toThrow();
+  });
+
+  it('is wiped along with everything else when a kingdom ends', async () => {
+    const store = memoryStore();
+    const sync = syncStore();
+    const repo = new SaveRepository(store, sync);
+    await repo.save(played(3, 50), 1000);
+    repo.saveLastWords(played(3, 50), 2000);
+    await repo.clear();
+    expect(await new SaveRepository(store, sync).load()).toBeNull();
+  });
+});
+
 describe('saving', () => {
   it('round-trips a played world exactly', async () => {
     const repo = new SaveRepository(memoryStore());
